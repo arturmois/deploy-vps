@@ -1,0 +1,23 @@
+{
+  "name": "deploy-vps",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arturmois/deploy-vps.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/arturmois/deploy-vps/issues"
+  },
+  "homepage": "https://github.com/arturmois/deploy-vps#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

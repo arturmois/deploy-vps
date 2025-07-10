@@ -1,0 +1,35 @@
+name: "Deploy para VPS"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Baixar o código"
+        uses: actions/checkout@v4
+      
+      - name: "Copy files via SSH"
+        uses: appleboy/scp-action@v1
+        with:
+          host: "168.231.96.253"
+          username: "root"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "."
+          target: "."
+      
+      - name: "Build da aplicação"
+        uses: appleboy/ssh-action@v1
+        with:
+          host: "168.231.96.253"
+          username: "root"
+          password: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            git pull
+            npm install
+            npm run dev
+
