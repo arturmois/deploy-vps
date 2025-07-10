@@ -22,14 +22,14 @@ jobs:
           source: "."
           target: "."
       
-      - name: "Build da aplicação"
-        uses: appleboy/ssh-action@v1
-        with:
-          host: "168.231.96.253"
-          username: "root"
-          password: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            git pull
-            npm install
-            npm run dev
+      # - name: "Build da aplicação"
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: "168.231.96.253"
+      #     username: "root"
+      #     password: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     script: |
+      #       git pull
+      #       npm install
+      #       npm run dev
 
