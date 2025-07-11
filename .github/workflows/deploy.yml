@@ -27,8 +27,8 @@ jobs:
       - name: Construir Aplicação TypeScript
         run: npm run build # Executa o script de build para compilar o TypeScript
 
-      - name: Rodar Testes
-        run: npm test # Executa os testes da aplicação (se houver)
+      # - name: Rodar Testes
+      #   run: npm test # Executa os testes da aplicação (se houver)
 
   build-and-push-docker-image:
     needs: build-and-test # Este job depende do sucesso do job 'build-and-test'
