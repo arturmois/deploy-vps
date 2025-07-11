@@ -9,27 +9,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Checa o código
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Configurar SSH
-        uses: appleboy/scp-action@v1
+      # 2) Carrega sua chave SSH no ssh-agent
+      - name: Configurar SSH-Agent
+        uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      # 3) (Opcional) Copia arquivos via SCP
+      #    * Se não precisar, remova este bloco
+      - name: Copiar docker-compose via SCP
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          # Aqui usa-se 'key', não 'ssh-private-key'
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.yml"
+          target: "/home/${{ secrets.VPS_USER }}/app/"
+
+      # 4) Conecta por SSH e faz o deploy
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}    # <— aqui
-          # key_path: ~/.ssh/id_ed25519          # ou, se preferir, use key_path
+          # Aqui também usa-se 'key'
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Se preferir usar path, você pode definir:
+          # key_path: ~/.ssh/id_ed25519
           script: |
+            set -e
             DEPLOY_DIR=/home/${{ secrets.VPS_USER }}/app
+            # Clona o repo se não existir
             if [ ! -d "$DEPLOY_DIR" ]; then
-              git clone git@github.com:SEU_USUARIO/SEU_REPO.git $DEPLOY_DIR
+              git clone git@github.com:SEU_USUARIO/SEU_REPO.git "$DEPLOY_DIR"
             fi
-            cd $DEPLOY_DIR
+            cd "$DEPLOY_DIR"
             git fetch --all
             git reset --hard origin/main
+            # Subir/reconstruir containers
             docker compose up -d --build
