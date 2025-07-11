@@ -2,9 +2,6 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: arturmois/deploy-vps:latest
     container_name: deploy-vps
     ports:

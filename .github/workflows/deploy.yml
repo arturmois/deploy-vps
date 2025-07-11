@@ -83,7 +83,6 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }} # Substitua pelo IP da sua VPS
         run: |
           ssh -i ~/.ssh/id_rsa_deploy -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << 'EOF'
-            cd /caminho/para/o/seu/projeto/na/vps # Ex: /var/www/minha-aplicacao
             docker compose pull # Puxa a imagem mais recente do Docker Hub
             docker compose down # Para e remove os contêineres antigos
             docker compose up -d # Inicia os novos contêineres em modo detached
