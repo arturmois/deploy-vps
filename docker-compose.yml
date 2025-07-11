@@ -1,9 +1,37 @@
-version: "3.8"
+version: '3.8'
+
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: arturmois/deploy-vps:latest
+    container_name: deploy-vps
     ports:
-      - "3000:3000"
+      - "3000:3000" # Mapeia a porta 3000 do host para a porta 3000 do contêiner
     environment:
-      - NODE_ENV=production
-      - PORT=3000
+      NODE_ENV: production
+      # Outras variáveis de ambiente sensíveis podem ser adicionadas aqui
+      # Exemplo: DATABASE_URL: ${DATABASE_URL}
+    restart: always # Garante que o contêiner reinicie automaticamente
+    # depends_on:
+    #   - mongodb # Se você tiver um serviço de banco de dados
+    # networks:
+    #   - app-network
+
+  # mongodb: # Exemplo de serviço de banco de dados
+  #   image: mongo:latest
+  #   container_name: mongodb
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongodb_data:/data/db # Persiste os dados do banco de dados
+  #   networks:
+  #     - app-network
+
+# volumes:
+#   mongodb_data: # Define o volume para persistência de dados
+
+# networks:
+#   app-network: # Define a rede para os serviços se comunicarem
+#     driver: bridge

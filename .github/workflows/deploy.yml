@@ -1,34 +1,91 @@
-name: Deploy to VPS
+name: CI/CD da Aplicação Node.js/TypeScript
 
 on:
   push:
     branches:
-      - main
+      - main # O workflow será acionado em cada push para a branch 'main'
+  pull_request:
+    branches:
+      - main # Opcional: Acionar em pull requests para rodar testes antes do merge
 
 jobs:
-  deploy:
+  build-and-test:
+    runs-on: ubuntu-latest # O job será executado em uma máquina virtual Ubuntu hospedada pelo GitHub
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4 # Clona o repositório para a máquina virtual do GitHub Actions
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Define a versão do Node.js a ser usada
+
+      - name: Instalar Dependências
+        run: npm ci # Instala as dependências de forma limpa e consistente
+
+      - name: Construir Aplicação TypeScript
+        run: npm run build # Executa o script de build para compilar o TypeScript
+
+      - name: Rodar Testes
+        run: npm test # Executa os testes da aplicação (se houver)
+
+  build-and-push-docker-image:
+    needs: build-and-test # Este job depende do sucesso do job 'build-and-test'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Somente executa em push para a branch main
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout do Código
         uses: actions/checkout@v4
 
-      - name: Copy files to VPS via SSH
-        uses: appleboy/scp-action@v0.1.7
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "."
-          target: "~/app"
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Run Docker Compose on VPS
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Extrair Metadados (tags, labels) para Docker
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd ~/app
-            docker compose down || true
-            docker compose up -d --build
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long,prefix=
+
+      - name: Construir e Publicar Imagem Docker no Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context:.
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-to-vps:
+    needs: build-and-push-docker-image # Este job depende do sucesso do job 'build-and-push-docker-image'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Somente executa em push para a branch main
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configurar Chave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa_deploy
+          chmod 600 ~/.ssh/id_rsa_deploy
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts # Adiciona o host da VPS aos hosts conhecidos
+
+      - name: Conectar à VPS e Implantar Aplicação Docker
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PROJECT_NAME: ${{ secrets.DOCKERHUB_PROJECT_NAME }}
+          VPS_USER: seu_usuario_admin # Substitua pelo seu usuário não-root na VPS
+          VPS_HOST: seu_endereco_ip_da_vps # Substitua pelo IP da sua VPS
+        run: |
+          ssh -i ~/.ssh/id_rsa_deploy -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << 'EOF'
+            cd /caminho/para/o/seu/projeto/na/vps # Ex: /var/www/minha-aplicacao
+            docker compose pull # Puxa a imagem mais recente do Docker Hub
+            docker compose down # Para e remove os contêineres antigos
+            docker compose up -d # Inicia os novos contêineres em modo detached
+            docker system prune -f # Limpa imagens e volumes não utilizados para economizar espaço
+          EOF
