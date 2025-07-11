@@ -1,35 +1,37 @@
-name: "Deploy para VPS"
+name: CI/CD Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  build_deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: "Baixar o código"
+      - name: Checkout do código
         uses: actions/checkout@v4
-      
-      - name: "Copy files via SSH"
-        uses: appleboy/scp-action@v1
-        with:
-          host: "168.231.96.253"
-          username: "root"
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "."
-          target: "."
-      
-      # - name: "Build da aplicação"
-      #   uses: appleboy/ssh-action@v1
-      #   with:
-      #     host: "168.231.96.253"
-      #     username: "root"
-      #     password: ${{ secrets.SSH_PRIVATE_KEY }}
-      #     script: |
-      #       git pull
-      #       npm install
-      #       npm run dev
 
+      - name: Configurar SSH
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Pasta onde ficará o código na VPS
+            DEPLOY_DIR=/home/${{ secrets.VPS_USER }}/app
+            # Clonar ou atualizar repo
+            if [ ! -d "$DEPLOY_DIR" ]; then
+              git clone git@github.com:SEU_USUARIO/SEU_REPO.git $DEPLOY_DIR
+            fi
+            cd $DEPLOY_DIR
+            git fetch --all
+            git reset --hard origin/main
+            # Subir nova versão com Docker Compose
+            docker compose -f docker-compose.yml up -d --build
