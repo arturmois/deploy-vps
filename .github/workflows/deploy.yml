@@ -19,7 +19,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Define a versão do Node.js a ser usada
+          node-version: "20" # Define a versão do Node.js a ser usada
 
       - name: Instalar Dependências
         run: npm ci # Instala as dependências de forma limpa e consistente
@@ -57,7 +57,7 @@ jobs:
       - name: Construir e Publicar Imagem Docker no Docker Hub
         uses: docker/build-push-action@v5
         with:
-          context:.
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
