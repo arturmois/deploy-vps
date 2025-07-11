@@ -1,9 +1,10 @@
-version: "3.8"
+version: '3.8'
 services:
-  web:
+  app:
     build: .
+    image: my-ts-app
     restart: always
     ports:
-      - "3000:3000"      # mapeia porta 3000 pública → 3000 da app
-    environment:
-      NODE_ENV: production
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data

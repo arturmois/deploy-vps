@@ -1,31 +1,27 @@
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
+name: Deploy to VPS
 
-            DEPLOY_DIR=/home/${{ secrets.VPS_USER }}/app
+on:
+  push:
+    branches: [main]
 
-            if [ -d "$DEPLOY_DIR" ]; then
-              # Se existir, verificar se é git
-              if [ -d "$DEPLOY_DIR/.git" ]; then
-                echo "🚀 Atualizando repositório existente"
-                cd "$DEPLOY_DIR"
-                git fetch --all
-                git reset --hard origin/main
-              else
-                echo "⚠️ Diretório existe mas não é Git. Removendo e clonando do zero."
-                rm -rf "$DEPLOY_DIR"
-                git clone git@github.com:SEU_USUARIO/SEU_REPO.git "$DEPLOY_DIR"
-              fi
-            else
-              echo "📂 Diretório não existe. Clonando pela primeira vez."
-              git clone git@github.com:SEU_USUARIO/SEU_REPO.git "$DEPLOY_DIR"
-            fi
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-            cd "$DEPLOY_DIR"
-            echo "🐳 Iniciando Docker Compose"
-            docker compose up -d --build
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy to VPS
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+          cd ${{ secrets.VPS_DEPLOY_PATH }} &&
+          git pull origin main &&
+          sudo docker-compose -f docker-compose.prod.yml up -d --build &&
+          echo 'Deploy realizado com sucesso!'
+        "
