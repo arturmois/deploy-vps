@@ -1,26 +1,3 @@
-name: CI/CD Deploy
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      # 1) (Opcional) Checkout local — não é usado para copiar nada, mas você pode precisar 
-      #    caso venha a rodar testes ou linters aqui antes do deploy.
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      # 2) Carrega sua chave no ssh-agent
-      - name: Configurar SSH-Agent
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      # 3) Conecta na VPS e faz clone/pull + docker compose
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -30,18 +7,25 @@ jobs:
           script: |
             set -e
 
-            # Diretório remoto onde ficará seu app
             DEPLOY_DIR=/home/${{ secrets.VPS_USER }}/app
 
-            # Se não existir, clona o repo
-            if [ ! -d "$DEPLOY_DIR/.git" ]; then
+            if [ -d "$DEPLOY_DIR" ]; then
+              # Se existir, verificar se é git
+              if [ -d "$DEPLOY_DIR/.git" ]; then
+                echo "🚀 Atualizando repositório existente"
+                cd "$DEPLOY_DIR"
+                git fetch --all
+                git reset --hard origin/main
+              else
+                echo "⚠️ Diretório existe mas não é Git. Removendo e clonando do zero."
+                rm -rf "$DEPLOY_DIR"
+                git clone git@github.com:SEU_USUARIO/SEU_REPO.git "$DEPLOY_DIR"
+              fi
+            else
+              echo "📂 Diretório não existe. Clonando pela primeira vez."
               git clone git@github.com:SEU_USUARIO/SEU_REPO.git "$DEPLOY_DIR"
             fi
 
-            # Vai para o diretório e garante estar na última versão
             cd "$DEPLOY_DIR"
-            git fetch --all
-            git reset --hard origin/main
-
-            # (Re)constrói e sobe os containers
+            echo "🐳 Iniciando Docker Compose"
             docker compose up -d --build
