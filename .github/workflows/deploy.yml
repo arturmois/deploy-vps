@@ -79,8 +79,8 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PROJECT_NAME: ${{ secrets.DOCKERHUB_PROJECT_NAME }}
-          VPS_USER: seu_usuario_admin # Substitua pelo seu usuário não-root na VPS
-          VPS_HOST: seu_endereco_ip_da_vps # Substitua pelo IP da sua VPS
+          VPS_USER: ${{ secrets.VPS_USER }} # Substitua pelo seu usuário não-root na VPS
+          VPS_HOST: ${{ secrets.VPS_HOST }} # Substitua pelo IP da sua VPS
         run: |
           ssh -i ~/.ssh/id_rsa_deploy -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << 'EOF'
             cd /caminho/para/o/seu/projeto/na/vps # Ex: /var/www/minha-aplicacao
