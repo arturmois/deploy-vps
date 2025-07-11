@@ -9,47 +9,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Checa o código
+      # 1) (Opcional) Checkout local — não é usado para copiar nada, mas você pode precisar 
+      #    caso venha a rodar testes ou linters aqui antes do deploy.
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # 2) Carrega sua chave SSH no ssh-agent
+      # 2) Carrega sua chave no ssh-agent
       - name: Configurar SSH-Agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 3) (Opcional) Copia arquivos via SCP
-      #    * Se não precisar, remova este bloco
-      - name: Copiar docker-compose via SCP
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          # Aqui usa-se 'key', não 'ssh-private-key'
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml"
-          target: "/home/${{ secrets.VPS_USER }}/app/"
-
-      # 4) Conecta por SSH e faz o deploy
+      # 3) Conecta na VPS e faz clone/pull + docker compose
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          # Aqui também usa-se 'key'
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Se preferir usar path, você pode definir:
-          # key_path: ~/.ssh/id_ed25519
           script: |
             set -e
+
+            # Diretório remoto onde ficará seu app
             DEPLOY_DIR=/home/${{ secrets.VPS_USER }}/app
-            # Clona o repo se não existir
-            if [ ! -d "$DEPLOY_DIR" ]; then
+
+            # Se não existir, clona o repo
+            if [ ! -d "$DEPLOY_DIR/.git" ]; then
               git clone git@github.com:SEU_USUARIO/SEU_REPO.git "$DEPLOY_DIR"
             fi
+
+            # Vai para o diretório e garante estar na última versão
             cd "$DEPLOY_DIR"
             git fetch --all
             git reset --hard origin/main
-            # Subir/reconstruir containers
+
+            # (Re)constrói e sobe os containers
             docker compose up -d --build
